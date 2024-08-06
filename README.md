@@ -1,4 +1,4 @@
 
 ## About me 🦥
 
-Hi, I'm Charles Liggins, a first year studying CS here at Cornell University 
+Hi, I'm Charles Liggins, a second year studying CS here at Cornell University 
