@@ -5,14 +5,10 @@
 </p>
 - Passionate about Mobile Development 
 - Seeking to create applications that people want and need to use
-<div align="center">
-  [![My Skills](https://skillicons.dev/icons?i=java,kotlin,nodejs,figma&theme=light)](https://skillicons.dev)
-
-</div>
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=git,kubernetes,docker,c,vim" />
+    <img src="https://skillicons.dev/icons?i=git,figma,swift,js,html,css,ts" />
   </a>
 </p>
 
