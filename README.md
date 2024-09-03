@@ -2,8 +2,8 @@
 ## About me 🦥
 <p align="center">
   Hi, I'm Charles Liggins, a second year studying Computer Science here at Cornell University 
-    * Passionate about Mobile Development 
-    * Seeking to create applications that people want and need to use
+    ** Passionate about Mobile Development 
+    ** Seeking to create applications that people want and need to use
     
 </p>
 
