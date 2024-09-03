@@ -21,7 +21,7 @@
     <img src="https://skillicons.dev/icons?i=git,figma,swift,js,html,css,ts,python,tailwind, java" />
   </a>
 </p>
-[![GitHub Streak](http://github-readme-streak-stats.herokuapp.com?user=your-github-username&theme=dark&background=000000)](https://git.io/streak-stats)
+[![GitHub Streak](http://github-readme-streak-stats.herokuapp.com?xhether&theme=dark&background=000000)](https://git.io/streak-stats)
 
 <div id="badges" align="center">
   <a href="https://www.linkedin.com/in/charles-liggins-31189b274/"> 
