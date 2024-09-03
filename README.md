@@ -5,6 +5,7 @@
 </p>
 - Passionate about Mobile Development 
 - Seeking to create applications that people want and need to use
+- Check out my portfolio [] to learn more about me!
 
 <p align="center">
   <a href="https://skillicons.dev">
