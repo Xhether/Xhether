@@ -3,13 +3,22 @@
 <p align="center">
   Hi, I'm Charles Liggins, a second year studying Computer Science here at Cornell University 
 </p>
-- Passionate about Mobile Development 
-- Seeking to create applications that people want and need to use
-- Check out my portfolio [] to learn more about me!
+<ul>
+  <li>
+     📲 Passionate about Mobile Development 
+  </li>
+  <li>
+    🧑🏽‍💻 Seeking to create applications that people want and need to use
+  </li>
+  <li>
+    ⌨️ Check out my portfolio [] to learn more about me!
+  </li>
+</ul>
+
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=git,figma,swift,js,html,css,ts,python,tailwind" />
+    <img src="https://skillicons.dev/icons?i=git,figma,swift,js,html,css,ts,python,tailwind, java" />
   </a>
 </p>
 
