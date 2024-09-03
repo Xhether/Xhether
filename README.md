@@ -21,9 +21,9 @@
     <img src="https://skillicons.dev/icons?i=git,figma,swift,js,html,css,ts,python,tailwind, java" />
   </a>
 </p>
-<div align="center>
+<p align="center>
   <a href="https://git.io/streak-stats"><img src="https://github-readme-streak-stats.herokuapp.com?user=xhether&theme=tokyonight" alt="GitHub Streak" /></a>
-</div>
+</p>
 <div id="badges" align="center">
   <a href="https://www.linkedin.com/in/charles-liggins-31189b274/"> 
   <img src="https://img.shields.io/badge/LinkedIn-blue?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn Badge"/>
