@@ -10,9 +10,11 @@
 
 </div>
 
-<div id="header" align="center">
-  <img src="https://media.giphy.com/media/M9gbBd9nbDrOTu1Mqx/giphy.gif" width="100"/>
-</div>
+<p align="center">
+  <a href="https://skillicons.dev">
+    <img src="https://skillicons.dev/icons?i=git,kubernetes,docker,c,vim" />
+  </a>
+</p>
 
 <div id="badges" align="center">
   <a href="https://www.linkedin.com/in/charles-liggins-31189b274/"> 
