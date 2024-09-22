@@ -27,7 +27,7 @@
 </p>
 
 <p align="center>
- <img src= "![](https://leetcard.jacoblin.cool/Xhether?theme=wtf&font=Ubuntu_Mono)" />
+ <a href= "![](https://leetcard.jacoblin.cool/Xhether?theme=wtf&font=Ubuntu_Mono)"/></a>
 </p>
 
 <div id="badges" align="center">
