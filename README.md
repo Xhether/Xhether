@@ -27,7 +27,7 @@
 </p>
 
 <p align="center>
-  ![](https://leetcard.jacoblin.cool/Xhether?theme=wtf&font=Ubuntu_Mono)
+ <img src= "![](https://leetcard.jacoblin.cool/Xhether?theme=wtf&font=Ubuntu_Mono)" />
 </p>
 
 <div id="badges" align="center">
