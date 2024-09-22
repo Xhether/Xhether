@@ -26,8 +26,7 @@
   <a href="https://git.io/streak-stats"><img src="https://github-readme-streak-stats.herokuapp.com?user=xhether&theme=tokyonight" alt="GitHub Streak" /></a>
 </p>
 
-![](https://leetcard.jacoblin.cool/jacoblincool?theme=unicorn)
-![](https://leetcard.jacoblin.cool/jacoblincool?theme=light,unicorn)
+![](https://leetcard.jacoblin.cool/Xhether?theme=unicorn)
 
 <div id="badges" align="center">
   <a href="https://www.linkedin.com/in/charles-liggins-31189b274/"> 
