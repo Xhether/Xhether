@@ -3,7 +3,7 @@
 <p align="center">
   Hi, I'm Charles Liggins, a second year studying Computer Science here at Cornell University 
 </p>
-<ul>
+<ul align="center">
   <li>
      📲 Passionate about Mobile Development 
   </li>
