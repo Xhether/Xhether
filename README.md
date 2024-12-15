@@ -3,17 +3,11 @@
 <p align="center">
   Hi, I'm Charles Liggins, a second year studying Computer Science here at Cornell University 
 </p>
-<ul align="center"  class="no-bullets">
-  <li>
-     📲 Passionate about Mobile Development 
-  </li>
-  <li>
-    🧑🏽‍💻 Seeking to create applications that people want and need to use
-  </li>
-  <li>
-    ⌨️ Check out my portfolio [charlesliggins.me] to learn more about me!
-  </li>
-</ul>
+<div align="center">
+  📲 Passionate about Mobile Development<br>
+  🧑🏽‍💻 Seeking to create applications that people want and need to use<br>
+  ⌨️ Check out my portfolio [charlesliggins.me] to learn more about me!
+</div>
 
 
 <p align="center">
