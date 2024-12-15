@@ -17,9 +17,7 @@
   </a>
 </p>
 
-<p align="center">
-  <a href="https://git.io/streak-stats"><img src="https://github-readme-streak-stats.herokuapp.com?user=xhether&theme=tokyonight" alt="GitHub Streak" /></a>
-</p>
+
 
 <img src="![](https://leetcard.jacoblin.cool/jacoblincool?font=Dancing_Script)" />
 <div id="badges" align="center">
