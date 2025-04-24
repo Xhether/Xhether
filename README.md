@@ -4,7 +4,6 @@
   Hi, I'm Charles Liggins, a second year studying Computer Science here at Cornell University 
 </p>
 <div align="center">
-  📲 Passionate about Mobile Development<br>
   🧑🏽‍💻 Seeking to create applications that people want and need to use<br>
   ⌨️ Check out my portfolio [charlesliggins.me] to learn more about me!
   
