@@ -1,7 +1,7 @@
 
 ## About me 🦥
 <p align="center">
-  Hi, I'm Charles Liggins, a second year studying Computer Science here at Cornell University 
+  Hi, I'm Charles Liggins, and I'm studying Computer Science at Cornell University 
 </p>
 <div align="center">
   🧑🏽‍💻 Seeking to create applications that people want and need to use<br>
