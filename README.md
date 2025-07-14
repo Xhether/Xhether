@@ -5,7 +5,7 @@
 </p>
 <div align="center">
   🧑🏽‍💻 Seeking to create applications that people want and need to use<br>
-  ⌨️ Check out my portfolio [charlesliggins.me] to learn more about me!
+  ⌨️ Check out my portfolio [charlesliggins.com] to learn more about me!
   
 </div>
 
