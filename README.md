@@ -10,17 +10,3 @@
 </div>
 
 
-<p align="center">
-  <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=git,figma,swift,js,html,css,ts,python,tailwind,java,ocaml,c" />
-  </a>
-</p>
-
-
-
-<img src="![](https://leetcard.jacoblin.cool/jacoblincool?font=Dancing_Script)" />
-<div id="badges" align="center">
-  <a href="https://www.linkedin.com/in/charles-liggins-31189b274/"> 
-  <img src="https://img.shields.io/badge/LinkedIn-blue?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn Badge"/>
-  </a>
-</div>
