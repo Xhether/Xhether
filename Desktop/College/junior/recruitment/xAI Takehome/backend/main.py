@@ -45,38 +45,38 @@ def read_root():
 def get_dashboard_stats():
     try:
         # 1. Metrics
-        # Total Leads
         total_leads = supabase.table("leads").select("*", count="exact", head=True).execute().count
         
-        # Qualified Leads
         qualified_leads = supabase.table("leads").select("*", count="exact", head=True).eq("stage", "qualified").execute().count
         
-        # Messages (Activities of type email/message)
-        # Note: Supabase-py 'or' filter syntax is a bit tricky, doing separate counts for simplicity or raw query
         emails = supabase.table("activities").select("*", count="exact", head=True).eq("type", "email").execute().count
         messages = supabase.table("activities").select("*", count="exact", head=True).eq("type", "message").execute().count
         total_messages = (emails or 0) + (messages or 0)
         
-        # Meetings
         meetings = supabase.table("activities").select("*", count="exact", head=True).eq("type", "meeting").execute().count
 
+        # New metrics
+        notified_leads = supabase.table("leads").select("*", count="exact", head=True).eq("notification_sent", True).execute().count
+        responded_leads = supabase.table("leads").select("*", count="exact", head=True).eq("response_received", True).execute().count
+
         # 2. Pipeline Stages
-        # We need counts for: New, Contacted, Qualified, Proposal, Closed
-        stages = ["new", "contacted", "qualified", "proposal", "closed"]
+        stages = ["new", "contacted", "qualified", "engaged", "proposal", "closed"]  # Added engaged
         pipeline_stats = []
         for stage in stages:
             count = supabase.table("leads").select("*", count="exact", head=True).eq("stage", stage).execute().count
             pipeline_stats.append({"name": stage, "count": count or 0})
 
         # 3. Recent Activity
-        recent_activities = supabase.table("activities").select("*").order("created_at", desc=True).limit(5).execute().data
+        recent_activities = supabase.table("activities").select("*, leads(company, contact)").order("created_at", desc=True).limit(5).execute().data
 
         return {
             "metrics": {
                 "total_leads": total_leads,
                 "qualified_leads": qualified_leads,
                 "messages_sent": total_messages,
-                "meetings_booked": meetings
+                "meetings_booked": meetings,
+                "notified_leads": notified_leads or 0,
+                "responded_leads": responded_leads or 0
             },
             "pipeline": pipeline_stats,
             "recent_activities": recent_activities
@@ -188,6 +188,72 @@ async def qualify_lead_background(lead_data: dict):
         
     except Exception as e:
         print(f"Background qualification failed: {e}")
+
+@app.post("/leads/notify")
+async def notify_leads(lead_ids: List[str], background_tasks: BackgroundTasks):
+    """
+    Notify selected qualified leads with Grok-generated messages.
+    """
+    try:
+        notified = []
+        for lead_id in lead_ids:
+            # Fetch lead
+            lead_response = supabase.table("leads").select("*").eq("id", lead_id).single().execute()
+            if not lead_response.data or lead_response.data.get("stage") != "qualified":
+                continue  # Skip non-qualified
+            
+            lead_data = lead_response.data
+            
+            # Generate message with Grok (background for speed)
+            background_tasks.add_task(generate_and_log_notification, lead_id, lead_data)
+            notified.append(lead_id)
+        
+        return {"notified": len(notified), "lead_ids": notified}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def generate_and_log_notification(lead_id: str, lead_data: dict):
+    """
+    Background task: Generate message, update lead, log activity.
+    """
+    try:
+        message_result = await grok.generate_notification_message(lead_data)
+        
+        # Update lead: Mark as notified
+        supabase.table("leads").update({"notification_sent": True}).eq("id", lead_id).execute()
+        
+        # Log activity
+        supabase.table("activities").insert({
+            "lead_id": lead_id,
+            "type": "notification",
+            "action": f"Sent: {message_result.get('subject', 'Outreach Email')}",
+            "grok_generated": True,
+            "details": json.dumps(message_result)  # Store full message for later
+        }).execute()
+        
+        print(f"Notification sent for lead {lead_id}")
+    except Exception as e:
+        print(f"Notification failed for {lead_id}: {e}")
+
+# Add PATCH for marking response
+@app.patch("/leads/{lead_id}/respond")
+def mark_response_received(lead_id: str):
+    try:
+        response = supabase.table("leads").update({"response_received": True, "stage": "engaged"}).eq("id", lead_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Lead not found")
+        
+        # Log activity
+        supabase.table("activities").insert({
+            "lead_id": lead_id,
+            "type": "response",
+            "action": "Lead responded to notification",
+            "grok_generated": False
+        }).execute()
+        
+        return {"message": "Marked as responded"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # --- EVALUATION ---
 

@@ -19,6 +19,8 @@ class LeadBase(BaseModel):
     notes: Optional[str] = None
     tags: Optional[List[str]] = None
     insights: Optional[List[str]] = []
+    notification_sent: Optional[bool] = False
+    response_received: Optional[bool] = False
 
 # Properties to receive on creation
 class LeadCreate(LeadBase):
@@ -41,7 +43,9 @@ class LeadUpdate(BaseModel):
     notes: Optional[str] = None
     tags: Optional[List[str]] = None
     insights: Optional[List[str]] = None
-
+    notification_sent: Optional[bool] = None
+    response_received: Optional[bool] = None
+    
 # Properties to return to client
 class Lead(LeadBase):
     id: str

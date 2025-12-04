@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Send, Sparkles, RotateCw, Copy, Mail, Search, X, Building2, User } from 'lucide-react';
+import { Send, Sparkles, RotateCw, Copy, Mail, Search, X, Building2, User, Edit3, Zap } from 'lucide-react';
 
 export function MessagingView() {
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [generatedMessage, setGeneratedMessage] = useState('');
+  const [subject, setSubject] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [composeMode, setComposeMode] = useState<'blank' | 'ai'>('blank');
 
   // Mock leads database
   const allLeads = [
@@ -53,8 +55,48 @@ I'd love to schedule a brief 15-minute call to explore if there's a fit. Would n
 Looking forward to connecting!
 
 Best regards`);
+      setSubject(`Quick question about ${selectedLead.company}'s growth plans`);
       setIsGenerating(false);
     }, 2000);
+  };
+
+  const handleEnhance = (action: 'improve' | 'shorten' | 'lengthen' | 'professional' | 'casual') => {
+    setIsGenerating(true);
+    // Simulate AI enhancement
+    setTimeout(() => {
+      let enhanced = generatedMessage;
+      switch (action) {
+        case 'shorten':
+          enhanced = `Hi ${selectedLead?.name.split(' ')[0]},
+
+I noticed ${selectedLead?.company} is expanding in tech. Our solution has helped similar companies achieve 40% cost reduction and 3x faster time-to-market.
+
+Would you have 15 minutes next week to explore if there's a fit?
+
+Best regards`;
+          break;
+        case 'lengthen':
+          enhanced = generatedMessage + `\n\nAdditionally, I'd be happy to share some case studies from companies in your industry who have seen remarkable results. We've specifically worked with [similar company] and helped them overcome similar challenges.\n\nWould you prefer a call or perhaps a quick video demo?`;
+          break;
+        case 'professional':
+          enhanced = generatedMessage.replace('Hi', 'Dear').replace('I hope this message finds you well.', 'I trust this message finds you well.');
+          break;
+        case 'casual':
+          enhanced = generatedMessage.replace('Dear', 'Hi').replace('I trust', 'I hope');
+          break;
+        default:
+          enhanced = generatedMessage;
+      }
+      setGeneratedMessage(enhanced);
+      setIsGenerating(false);
+    }, 1500);
+  };
+
+  const handleStartComposing = () => {
+    if (selectedLead && !subject) {
+      setSubject(`Reaching out from [Your Company]`);
+    }
+    setComposeMode('blank');
   };
 
   return (
@@ -185,13 +227,23 @@ Best regards`);
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    Generate Message
+                    Generate with AI
                   </>
                 )}
               </button>
 
               {!selectedLead && (
-                <p className="text-xs text-neutral-500 text-center">Select a lead to generate message</p>
+                <p className="text-xs text-neutral-500 text-center">Select a lead to get started</p>
+              )}
+
+              {selectedLead && !generatedMessage && (
+                <button
+                  onClick={handleStartComposing}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors"
+                >
+                  <Edit3 className="w-5 h-5" />
+                  Write Manually
+                </button>
               )}
             </div>
           </div>
@@ -226,23 +278,33 @@ Best regards`);
         <div className="lg:col-span-2">
           <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 h-full flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg">Generated Message</h2>
+              <h2 className="text-lg">Compose Message</h2>
               {generatedMessage && (
                 <div className="flex gap-2">
-                  <button className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedMessage);
+                    }}
+                    className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors"
+                    title="Copy to clipboard"
+                  >
                     <Copy className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={handleGenerate}
+                    onClick={() => {
+                      setGeneratedMessage('');
+                      setSubject('');
+                    }}
                     className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors"
+                    title="Clear and start over"
                   >
-                    <RotateCw className="w-4 h-4" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               )}
             </div>
 
-            {generatedMessage ? (
+            {(generatedMessage || composeMode === 'blank') && selectedLead ? (
               <>
                 <div className="flex-1 mb-4">
                   <div className="p-4 bg-neutral-800 rounded-lg mb-4">
@@ -251,19 +313,80 @@ Best regards`);
                     <p className="text-sm text-neutral-400 mb-1">Subject</p>
                     <input
                       type="text"
-                      defaultValue={`Quick question about ${selectedLead?.company}'s growth plans`}
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="Enter email subject..."
                       className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg focus:outline-none focus:border-neutral-600"
                     />
                   </div>
                   <textarea
                     value={generatedMessage}
                     onChange={(e) => setGeneratedMessage(e.target.value)}
+                    placeholder={`Start writing your message to ${selectedLead?.name}...\n\nOr use the AI generation button to get started.`}
                     className="w-full h-96 p-4 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-neutral-600 resize-none"
                   />
                 </div>
 
+                {/* AI Enhancement Tools */}
+                {generatedMessage && (
+                  <div className="mb-4 pb-4 border-b border-neutral-800">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Zap className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm text-neutral-400">AI Enhancements</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleEnhance('improve')}
+                        disabled={isGenerating}
+                        className="px-3 py-1.5 text-sm bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50"
+                      >
+                        ✨ Improve
+                      </button>
+                      <button
+                        onClick={() => handleEnhance('shorten')}
+                        disabled={isGenerating}
+                        className="px-3 py-1.5 text-sm bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50"
+                      >
+                        📉 Make Shorter
+                      </button>
+                      <button
+                        onClick={() => handleEnhance('lengthen')}
+                        disabled={isGenerating}
+                        className="px-3 py-1.5 text-sm bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50"
+                      >
+                        📈 Add Detail
+                      </button>
+                      <button
+                        onClick={() => handleEnhance('professional')}
+                        disabled={isGenerating}
+                        className="px-3 py-1.5 text-sm bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50"
+                      >
+                        👔 More Professional
+                      </button>
+                      <button
+                        onClick={() => handleEnhance('casual')}
+                        disabled={isGenerating}
+                        className="px-3 py-1.5 text-sm bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50"
+                      >
+                        😊 More Casual
+                      </button>
+                      <button
+                        onClick={handleGenerate}
+                        disabled={isGenerating}
+                        className="px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        <RotateCw className="w-3 h-3 inline mr-1" />
+                        Regenerate
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-3">
-                  <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white text-black rounded-lg hover:bg-neutral-200 transition-colors">
+                  <button
+                    disabled={!generatedMessage.trim() || !subject.trim()}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white text-black rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <Send className="w-5 h-5" />
                     Send Email
                   </button>
@@ -275,9 +398,21 @@ Best regards`);
             ) : (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center text-neutral-500 max-w-md">
-                  <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p className="mb-2">Select a lead and configure your message parameters</p>
-                  <p className="text-sm">Click Generate to create personalized email outreach</p>
+                  <div className="flex justify-center gap-4 mb-6">
+                    <div className="p-4 bg-neutral-800 rounded-lg">
+                      <Sparkles className="w-8 h-8 mx-auto mb-2 text-purple-500" />
+                      <p className="text-sm">AI Generate</p>
+                    </div>
+                    <div className="flex items-center text-neutral-700">
+                      <span className="text-2xl">or</span>
+                    </div>
+                    <div className="p-4 bg-neutral-800 rounded-lg">
+                      <Edit3 className="w-8 h-8 mx-auto mb-2 text-blue-500" />
+                      <p className="text-sm">Write Manually</p>
+                    </div>
+                  </div>
+                  <p className="mb-2">Select a lead to get started</p>
+                  <p className="text-sm">Choose to generate with AI or write your own message from scratch</p>
                 </div>
               </div>
             )}

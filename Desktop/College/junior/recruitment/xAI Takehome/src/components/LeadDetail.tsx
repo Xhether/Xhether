@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import React from 'react';
-import { ArrowLeft, Mail, Phone, Linkedin, Calendar, TrendingUp, MessageSquare, Edit, Trash2, Save, X } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Linkedin, Calendar, TrendingUp, MessageSquare, Edit, Trash2, Save, X, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { clearCache } from '../utils/cache';
 
 interface LeadDetailProps {
@@ -27,6 +26,8 @@ interface Lead {
   tags?: string[];
   last_contact?: string;
   insights?: string[];
+  notification_sent?: boolean;
+  response_received?: boolean;
 }
 
 export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
@@ -98,7 +99,7 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
           setEditForm(updatedData);
         }
 
-        // Poll for Grok updates if needed
+        // Poll for Grok updates if critical fields changed
         const criticalFields = ['company', 'industry', 'employees', 'location', 'job_title'];
         const changedCritical = Object.keys(editForm).some(k =>
           criticalFields.includes(k) && editForm[k as keyof Lead] !== lead?.[k as keyof Lead]
@@ -133,6 +134,57 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
   const handleTagsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const tagsArray = e.target.value.split(',').map(t => t.trim());
     setEditForm(prev => ({ ...prev, tags: tagsArray }));
+  };
+
+  // Notification handlers
+  const handleNotifyLead = async () => {
+    if (!confirm('Send notification to this lead?')) return;
+
+    try {
+      const response = await fetch('http://localhost:8000/leads/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([leadId]),
+      });
+      if (response.ok) {
+        // Re-fetch lead
+        const updatedResponse = await fetch(`http://localhost:8000/leads/${leadId}`);
+        const updatedData = await updatedResponse.json();
+        setLead(updatedData);
+        setEditForm(updatedData);
+        clearCache('dashboard_data');
+        alert('Notification sent!');
+      } else {
+        alert('Failed to send notification.');
+      }
+    } catch (error) {
+      console.error('Notification error:', error);
+      alert('Error connecting to server.');
+    }
+  };
+
+  const handleMarkResponded = async () => {
+    if (!confirm('Mark this lead as responded?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:8000/leads/${leadId}/respond`, {
+        method: 'PATCH',
+      });
+      if (response.ok) {
+        // Re-fetch lead
+        const updatedResponse = await fetch(`http://localhost:8000/leads/${leadId}`);
+        const updatedData = await updatedResponse.json();
+        setLead(updatedData);
+        setEditForm(updatedData);
+        clearCache('dashboard_data');
+        alert('Marked as responded!');
+      } else {
+        alert('Failed to update response status.');
+      }
+    } catch (error) {
+      console.error('Response update error:', error);
+      alert('Error connecting to server.');
+    }
   };
 
   if (loading) return <div className="p-8 text-white">Loading...</div>;
@@ -370,6 +422,46 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
               </div>
             </div>
 
+            {/* Notification Status */}
+            {!isEditing && (
+              <div className="mt-4 space-y-2">
+                <p className="text-sm text-neutral-500">Notification Status</p>
+                <div className="flex items-center gap-2">
+                  {lead.notification_sent ? (
+                    lead.response_received ? (
+                      <span className="px-2 py-1 bg-green-500/10 text-green-500 text-xs rounded-full">
+                        Responded <CheckCircle className="w-3 h-3 inline ml-1" />
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-yellow-500/10 text-yellow-500 text-xs rounded-full">
+                        Notified - Awaiting Response <Clock className="w-3 h-3 inline ml-1" />
+                      </span>
+                    )
+                  ) : (
+                    <span className="px-2 py-1 bg-gray-500/10 text-gray-500 text-xs rounded-full">
+                      Not Notified Yet
+                    </span>
+                  )}
+                  {!lead.notification_sent && lead.stage === 'qualified' && (
+                    <button
+                      onClick={handleNotifyLead}
+                      className="text-xs px-3 py-1 bg-green-500/10 text-green-500 rounded-full hover:bg-green-500/20"
+                    >
+                      Notify Now
+                    </button>
+                  )}
+                  {lead.notification_sent && !lead.response_received && (
+                    <button
+                      onClick={handleMarkResponded}
+                      className="text-xs px-3 py-1 bg-blue-500/10 text-blue-500 rounded-full hover:bg-blue-500/20"
+                    >
+                      Mark as Responded
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Additional Info Section (Notes and Tags) */}
             <div className="space-y-4 mt-6 pt-6 border-t border-neutral-800">
               <div>
@@ -532,6 +624,7 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
                     <option value="new">New</option>
                     <option value="contacted">Contacted</option>
                     <option value="qualified">Qualified</option>
+                    <option value="engaged">Engaged</option>
                     <option value="proposal">Proposal</option>
                     <option value="closed">Closed</option>
                   </select>

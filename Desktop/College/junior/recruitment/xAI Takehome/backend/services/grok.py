@@ -133,3 +133,53 @@ class GrokService:
             "results": results,
             "failures": all_failures[-3:]  # Last 3 failures
         }
+
+    async def generate_notification_message(self, lead_data: Dict[str, Any], model: str = "grok-4-fast-reasoning") -> Dict[str, Any]:
+        """
+        Generates a personalized outreach message for a qualified lead.
+        """
+        prompt = f"""
+        Generate a personalized, professional outreach email for this qualified lead.
+        
+        Lead Data:
+        {json.dumps(lead_data, indent=2)}
+        
+        Return valid JSON only:
+        {{
+            "subject": <string email subject>,
+            "body": <string full email body (HTML-friendly)>,
+            "reasoning": <string why this message fits the lead>,
+            "tone": <"professional" | "casual" | "enthusiastic">,
+            "call_to_action": <string suggested next step>
+        }}
+        """
+
+        try:
+            start_time = time.time()
+            response = await self.client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are a sales expert. Generate concise, effective outreach emails."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3  # Slightly creative for messaging
+            )
+            duration = time.time() - start_time
+            
+            content = response.choices[0].message.content
+            if "```" in content:
+                content = content.split("```")[1].replace("json", "").strip()
+            
+            result = json.loads(content)
+            result["_meta"] = {"latency": duration, "status": "success"}
+            return result
+        except Exception as e:
+            print(f"Message Generation Error: {e}")
+            return {
+                "subject": "Follow-up on Your Interest",
+                "body": "Hi {contact},<br>Thanks for your interest. Let's schedule a call.<br>Best,<br>Your Team",
+                "reasoning": str(e),
+                "tone": "professional",
+                "call_to_action": "Reply to schedule",
+                "_meta": {"latency": 0, "status": "failure"}
+            }

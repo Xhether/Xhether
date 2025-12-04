@@ -25,6 +25,7 @@ export function LeadsView({ onSelectLead }: LeadsViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
 
   const stages = ['all', 'new', 'contacted', 'qualified', 'proposal', 'closed'];
 
@@ -70,6 +71,51 @@ export function LeadsView({ onSelectLead }: LeadsViewProps) {
     return <AddLeadView onBack={() => setView('list')} onSave={handleSaveLead} />;
   }
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedLeads(filteredLeads.map(lead => lead.id));
+    } else {
+      setSelectedLeads([]);
+    }
+  };
+
+  const handleLeadSelect = (leadId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedLeads(prev => [...prev, leadId]);
+    } else {
+      setSelectedLeads(prev => prev.filter(id => id !== leadId));
+    }
+  };
+
+  const handleNotifySelected = async () => {
+    if (selectedLeads.length === 0) {
+      alert('Select at least one qualified lead.');
+      return;
+    }
+
+    if (!confirm(`Notify ${selectedLeads.length} selected leads?`)) return;
+
+    try {
+      const response = await fetch('http://localhost:8000/leads/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selectedLeads),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        alert(`${result.notified} leads notified successfully!`);
+        setSelectedLeads([]); // Clear selection
+        fetchLeads(); // Refresh list
+        clearCache('dashboard_data'); // Update metrics
+      } else {
+        alert('Failed to notify leads.');
+      }
+    } catch (error) {
+      console.error('Notification error:', error);
+      alert('Error connecting to server.');
+    }
+  };
+
   const filteredLeads = leads.filter((lead) => {
     const matchesStage = selectedStage === 'all' || lead.stage === selectedStage;
     const matchesSearch =
@@ -79,58 +125,78 @@ export function LeadsView({ onSelectLead }: LeadsViewProps) {
   });
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl mb-2">Leads</h1>
-          <p className="text-neutral-400">Manage and track your sales prospects</p>
+    <div className="p-6">
+      {/* Header with filter and notify button */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex gap-4">
+          <h1 className="text-2xl font-bold">Leads</h1>
+          {view === 'list' && (
+            <>
+              <select
+                value={selectedStage}
+                onChange={(e) => setSelectedStage(e.target.value)}
+                className="bg-neutral-800 border border-neutral-700 rounded px-3 py-1 text-white"
+              >
+                <option value="all">All Stages</option>
+                <option value="qualified">Qualified Only</option>
+                {/* ... other stages ... */}
+              </select>
+              <button
+                onClick={() => setView('add')}
+                className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-neutral-200"
+              >
+                <Plus className="w-4 h-4" />
+                Add Lead
+              </button>
+            </>
+          )}
         </div>
-        <button
-          onClick={() => setView('add')}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-neutral-200 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Add Lead
-        </button>
-      </div>
-
-      <div className="mb-6 flex gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
-          <input
-            type="text"
-            placeholder="Search leads..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-neutral-900 border border-neutral-800 rounded-lg focus:outline-none focus:border-neutral-600"
-          />
-        </div>
-        <button className="flex items-center gap-2 px-4 py-3 bg-neutral-900 border border-neutral-800 rounded-lg hover:bg-neutral-800 transition-colors">
-          <Filter className="w-5 h-5" />
-          Filter
-        </button>
-      </div>
-
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        {stages.map((stage) => (
+        {view === 'list' && selectedLeads.length > 0 && selectedStage === 'qualified' && (
           <button
-            key={stage}
-            onClick={() => setSelectedStage(stage)}
-            className={`px-4 py-2 rounded-lg capitalize whitespace-nowrap transition-colors ${selectedStage === stage
-                ? 'bg-white text-black'
-                : 'bg-neutral-900 text-neutral-400 hover:bg-neutral-800'
-              }`}
+            onClick={handleNotifySelected}
+            className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
           >
-            {stage}
+            Notify Selected ({selectedLeads.length})
           </button>
-        ))}
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filteredLeads.map((lead) => (
-          <LeadCard key={lead.id} lead={lead} onClick={() => onSelectLead(lead.id)} />
-        ))}
-      </div>
+      {view === 'add' ? (
+        <AddLeadView onBack={() => setView('list')} onSave={handleSaveLead} />
+      ) : (
+        <div>
+          {/* Select All Checkbox */}
+          {filteredLeads.length > 0 && selectedStage === 'qualified' && (
+            <div className="mb-4 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={selectedLeads.length === filteredLeads.length}
+                onChange={(e) => handleSelectAll(e.target.checked)}
+                className="rounded"
+              />
+              <label className="text-sm text-neutral-400">Select All ({filteredLeads.length} qualified)</label>
+            </div>
+          )}
+
+          {/* Leads List with Checkboxes */}
+          <div className="space-y-4">
+            {filteredLeads.map((lead) => (
+              <LeadCard
+                key={lead.id}
+                lead={lead}
+                onClick={() => onSelectLead(lead.id)}
+                isSelected={selectedLeads.includes(lead.id)}
+                onSelect={() => handleLeadSelect(lead.id, !selectedLeads.includes(lead.id))}
+                selectedStage={selectedStage}
+              />
+            ))}
+          </div>
+
+          {filteredLeads.length === 0 && (
+            <p className="text-center text-neutral-400 mt-8">No leads match the filter.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
