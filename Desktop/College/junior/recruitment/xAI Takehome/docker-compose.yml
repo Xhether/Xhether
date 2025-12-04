@@ -1,0 +1,42 @@
+version: '3.1'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - VITE_SUPABASE_URL=${SUPABASE_URL}
+      - VITE_SUPABASE_KEY=${SUPABASE_KEY}
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - XAI_API_KEY=${XAI_API_KEY}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db # If using local DB, but Supabase is external
+
+  db:
+    # Optional local Postgres for testing (comment out if using Supabase)
+    image: postgres:13
+    environment:
+      POSTGRES_DB: grok_sdr
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data

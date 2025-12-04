@@ -178,8 +178,8 @@ export function LeadsView({ onSelectLead }: LeadsViewProps) {
             </div>
           )}
 
-          {/* Leads List with Checkboxes */}
-          <div className="space-y-4">
+          {/* Leads List - Fixed height, scrollable */}
+          <div className="max-h-96 overflow-y-auto space-y-2">  {/* Fixed height, scrollable, smaller spacing */}
             {filteredLeads.map((lead) => (
               <LeadCard
                 key={lead.id}

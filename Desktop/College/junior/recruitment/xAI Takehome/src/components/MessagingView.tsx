@@ -1,78 +1,165 @@
-import { useState } from 'react';
-import { Send, Sparkles, RotateCw, Copy, Mail, Search, X, Building2, User, Edit3, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Send, Sparkles, RotateCw, Copy, Mail, Search, X, Building2, User, Edit3, Zap, Loader2 } from 'lucide-react';
+
+interface Lead {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  score: number;
+}
+
+interface Activity {
+  id: string;
+  type: string;
+  action: string;
+  details?: string;
+  created_at: string;
+  grok_generated: boolean;
+}
 
 export function MessagingView() {
-  const [selectedLead, setSelectedLead] = useState<any>(null);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [messages, setMessages] = useState<Activity[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [generatedMessage, setGeneratedMessage] = useState('');
   const [subject, setSubject] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoadingLeads, setIsLoadingLeads] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [composeMode, setComposeMode] = useState<'blank' | 'ai'>('blank');
+  const [tone, setTone] = useState('professional');
+  const [goal, setGoal] = useState('schedule_meeting');
+  const [model, setModel] = useState('grok-4-fast-reasoning');
+  const [error, setError] = useState('');
+  const [previewMode, setPreviewMode] = useState(false);
+  const [fullMessageHTML, setFullMessageHTML] = useState('');
 
-  // Mock leads database
-  const allLeads = [
-    { id: '1', name: 'John Smith', company: 'Acme Corporation', email: 'john@acme.com', score: 92 },
-    { id: '2', name: 'Sarah Johnson', company: 'TechStart Inc', email: 'sarah@techstart.com', score: 85 },
-    { id: '3', name: 'Michael Chen', company: 'Innovate Labs', email: 'michael@innovatelabs.com', score: 78 },
-    { id: '4', name: 'Emily Davis', company: 'DataCo Solutions', email: 'emily@dataco.com', score: 95 },
-    { id: '5', name: 'Robert Wilson', company: 'CloudTech Systems', email: 'robert@cloudtech.com', score: 88 },
-    { id: '6', name: 'Lisa Anderson', company: 'Enterprise Co', email: 'lisa@enterpriseco.com', score: 71 },
-    { id: '7', name: 'David Martinez', company: 'StartupXYZ', email: 'david@startupxyz.com', score: 82 },
-    { id: '8', name: 'Jennifer Lee', company: 'Global Tech', email: 'jennifer@globaltech.com', score: 90 },
-  ];
+  // Fetch all leads on mount
+  useEffect(() => {
+    const fetchLeads = async () => {
+      try {
+        setIsLoadingLeads(true);
+        setError('');
+        const response = await fetch('http://localhost:8000/leads');
+        if (response.ok) {
+          const data = await response.json();
+          const formattedLeads = data.map((item: any) => ({
+            id: item.id,
+            name: item.contact,
+            company: item.company,
+            email: item.email,
+            score: item.score,
+          }));
+          setLeads(formattedLeads);
+        } else {
+          throw new Error('Failed to fetch leads');
+        }
+      } catch (err) {
+        setError('Failed to load leads');
+        console.error(err);
+      } finally {
+        setIsLoadingLeads(false);
+      }
+    };
+    fetchLeads();
+  }, []);
 
-  const filteredLeads = allLeads.filter(lead =>
+  // Fetch messages for selected lead
+  useEffect(() => {
+    if (selectedLead) {
+      const fetchMessages = async () => {
+        try {
+          setIsLoadingMessages(true);
+          setError('');
+          const response = await fetch(`http://localhost:8000/leads/${selectedLead.id}/messages`);
+          if (response.ok) {
+            const data = await response.json();
+            setMessages(data.messages || []);
+          } else {
+            throw new Error('Failed to fetch messages');
+          }
+        } catch (err) {
+          setError('Failed to load messages');
+          console.error(err);
+        } finally {
+          setIsLoadingMessages(false);
+        }
+      };
+      fetchMessages();
+    } else {
+      setMessages([]);
+    }
+  }, [selectedLead]);
+
+  const filteredLeads = leads.filter(lead =>
     lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     lead.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
     lead.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSelectLead = (lead: any) => {
+  const handleSelectLead = (lead: Lead) => {
     setSelectedLead(lead);
     setSearchQuery('');
     setShowSearchResults(false);
+    setGeneratedMessage('');
+    setSubject('');
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!selectedLead) return;
 
     setIsGenerating(true);
-    // Simulate API call
-    setTimeout(() => {
-      setGeneratedMessage(`Hi ${selectedLead.name.split(' ')[0]},
+    setError('');
+    try {
+      const response = await fetch('http://localhost:8000/messages/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_id: selectedLead.id,
+          tone,
+          goal,
+          model,
+        }),
+      });
 
-I hope this message finds you well. I noticed that ${selectedLead.company} has been expanding rapidly in the technology sector, and I wanted to reach out about how we can help accelerate that growth.
+      if (!response.ok) throw new Error('Generation failed');
+      const result = await response.json();
 
-Based on my research, I see that your team is currently managing [specific pain point]. Our solution has helped companies similar to ${selectedLead.company} achieve:
+      if (result.success) {
+        setSubject(result.message.subject || '');
 
-• 40% reduction in operational costs
-• 3x faster time-to-market for new features
-• Seamless integration with your existing tech stack
+        // Strip HTML for editable textarea
+        let plainBody = result.message.body || '';
+        plainBody = plainBody.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
 
-I'd love to schedule a brief 15-minute call to explore if there's a fit. Would next Tuesday or Thursday work for you?
+        setGeneratedMessage(plainBody);
 
-Looking forward to connecting!
-
-Best regards`);
-      setSubject(`Quick question about ${selectedLead.company}'s growth plans`);
+        // Store full HTML for preview
+        setFullMessageHTML(result.message.body || '');
+      } else {
+        throw new Error('Invalid response');
+      }
+    } catch (err) {
+      setError('Failed to generate message - check backend or API key');
+      console.error(err);
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   const handleEnhance = (action: 'improve' | 'shorten' | 'lengthen' | 'professional' | 'casual') => {
+    // Simulated for now - can integrate backend later
     setIsGenerating(true);
-    // Simulate AI enhancement
     setTimeout(() => {
       let enhanced = generatedMessage;
       switch (action) {
         case 'shorten':
           enhanced = `Hi ${selectedLead?.name.split(' ')[0]},
-
 I noticed ${selectedLead?.company} is expanding in tech. Our solution has helped similar companies achieve 40% cost reduction and 3x faster time-to-market.
-
 Would you have 15 minutes next week to explore if there's a fit?
-
 Best regards`;
           break;
         case 'lengthen':
@@ -98,6 +185,10 @@ Best regards`;
     }
     setComposeMode('blank');
   };
+
+  if (isLoadingLeads) {
+    return <div className="p-8 flex items-center justify-center text-white"><Loader2 className="w-6 h-6 animate-spin mr-2" />Loading leads...</div>;
+  }
 
   return (
     <div className="p-8">
@@ -164,18 +255,18 @@ Best regards`;
                             <button
                               key={lead.id}
                               onClick={() => handleSelectLead(lead)}
-                              className="w-full p-3 hover:bg-neutral-700 transition-colors text-left border-b border-neutral-700 last:border-0"
+                              className="w-full p-2 hover:bg-neutral-700 transition-colors text-left border-b border-neutral-700 last:border-0 text-xs"
                             >
                               <div className="flex items-center justify-between gap-2 mb-1">
-                                <p className="text-sm">{lead.name}</p>
+                                <p className="truncate">{lead.name}</p>
                                 <span className="text-xs text-green-500">{lead.score}</span>
                               </div>
-                              <p className="text-xs text-neutral-400">{lead.company}</p>
-                              <p className="text-xs text-neutral-500">{lead.email}</p>
+                              <p className="text-xs text-neutral-400 truncate">{lead.company}</p>
+                              <p className="text-xs text-neutral-500 truncate">{lead.email}</p>
                             </button>
                           ))
                         ) : (
-                          <div className="p-4 text-sm text-neutral-500 text-center">
+                          <div className="p-2 text-xs text-neutral-500 text-center">
                             No leads found matching "{searchQuery}"
                           </div>
                         )}
@@ -187,30 +278,42 @@ Best regards`;
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-2">Tone</label>
-                <select className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-neutral-600">
-                  <option>Professional</option>
-                  <option>Casual</option>
-                  <option>Friendly</option>
-                  <option>Formal</option>
+                <select
+                  value={tone}
+                  onChange={(e) => setTone(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-neutral-600"
+                >
+                  <option value="professional">Professional</option>
+                  <option value="casual">Casual</option>
+                  <option value="friendly">Friendly</option>
+                  <option value="formal">Formal</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-2">Message Goal</label>
-                <select className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-neutral-600">
-                  <option>Schedule Meeting</option>
-                  <option>Initial Outreach</option>
-                  <option>Follow-up</option>
-                  <option>Share Resources</option>
+                <select
+                  value={goal}
+                  onChange={(e) => setGoal(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-neutral-600"
+                >
+                  <option value="schedule_meeting">Schedule Meeting</option>
+                  <option value="initial_outreach">Initial Outreach</option>
+                  <option value="follow_up">Follow-up</option>
+                  <option value="share_resources">Share Resources</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm text-neutral-400 mb-2">Grok Model</label>
-                <select className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-neutral-600">
-                  <option>Grok 4 Fast (Reasoning)</option>
-                  <option>Grok 3</option>
-                  <option>Grok 4 Fast (Non-Reasoning)</option>
+                <select
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-neutral-600"
+                >
+                  <option value="grok-4-fast-reasoning">Grok 4 Fast (Reasoning)</option>
+                  <option value="grok-3">Grok 3</option>
+                  <option value="grok-4-fast-non-reasoning">Grok 4 Fast (Non-Reasoning)</option>
                 </select>
               </div>
 
@@ -221,7 +324,7 @@ Best regards`;
               >
                 {isGenerating ? (
                   <>
-                    <RotateCw className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     Generating...
                   </>
                 ) : (
@@ -309,7 +412,7 @@ Best regards`;
                 <div className="flex-1 mb-4">
                   <div className="p-4 bg-neutral-800 rounded-lg mb-4">
                     <p className="text-sm text-neutral-400 mb-1">To</p>
-                    <p className="mb-3">{selectedLead?.email}</p>
+                    <p className="mb-3">{selectedLead.email}</p>
                     <p className="text-sm text-neutral-400 mb-1">Subject</p>
                     <input
                       type="text"
@@ -319,12 +422,37 @@ Best regards`;
                       className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg focus:outline-none focus:border-neutral-600"
                     />
                   </div>
-                  <textarea
-                    value={generatedMessage}
-                    onChange={(e) => setGeneratedMessage(e.target.value)}
-                    placeholder={`Start writing your message to ${selectedLead?.name}...\n\nOr use the AI generation button to get started.`}
-                    className="w-full h-96 p-4 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-neutral-600 resize-none"
-                  />
+
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      onClick={() => setPreviewMode(false)}
+                      className={`px-3 py-1 text-sm rounded ${!previewMode ? 'bg-white text-black' : 'bg-neutral-800 text-white'}`}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setPreviewMode(true)}
+                      className={`px-3 py-1 text-sm rounded ${previewMode ? 'bg-white text-black' : 'bg-neutral-800 text-white'}`}
+                    >
+                      Preview
+                    </button>
+                  </div>
+
+                  {previewMode ? (
+                    // HTML Preview
+                    <div
+                      className="w-full h-96 p-4 bg-white text-black border border-neutral-300 rounded-lg overflow-y-auto prose max-w-none"
+                      dangerouslySetInnerHTML={{ __html: generatedMessage.replace(/<br>/g, '<br/>') || 'No message to preview.' }}
+                    />
+                  ) : (
+                    // Editable Textarea (plain text)
+                    <textarea
+                      value={generatedMessage}
+                      onChange={(e) => setGeneratedMessage(e.target.value)}
+                      placeholder={`Start writing your message to ${selectedLead.name}...\n\nOr use the AI generation button to get started.`}
+                      className="w-full h-96 p-4 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-neutral-600 resize-none"
+                    />
+                  )}
                 </div>
 
                 {/* AI Enhancement Tools */}
@@ -420,30 +548,58 @@ Best regards`;
         </div>
       </div>
 
-      {/* Previous Messages */}
-      <div className="mt-6 bg-neutral-900 border border-neutral-800 rounded-xl p-6">
-        <h2 className="text-lg mb-4">Recent Generated Messages</h2>
-        <div className="space-y-3">
-          {[
-            { lead: 'John Smith', company: 'Acme Corporation', time: '2 hours ago' },
-            { lead: 'Sarah Johnson', company: 'TechStart Inc', time: '5 hours ago' },
-            { lead: 'Michael Chen', company: 'Innovate Labs', time: '1 day ago' },
-          ].map((item, i) => (
-            <div key={i} className="p-4 bg-neutral-800 rounded-lg hover:bg-neutral-750 cursor-pointer transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <p className="text-sm">{item.company} - {item.lead}</p>
-                  <p className="text-xs text-neutral-500 mt-1">Email • Professional Tone</p>
-                </div>
-                <span className="text-xs text-neutral-500">{item.time}</span>
-              </div>
-              <p className="text-sm text-neutral-400 line-clamp-2">
-                Hi {item.lead.split(' ')[0]}, I hope this message finds you well. I noticed that {item.company} has been...
-              </p>
-            </div>
-          ))}
+      {/* Recent Messages */}
+      {selectedLead && (isLoadingMessages ? (
+        <div className="mt-6 flex justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
         </div>
-      </div>
+      ) : messages.length > 0 && (
+        <div className="mt-6 bg-neutral-900 border border-neutral-800 rounded-xl p-6">
+          <h2 className="text-lg mb-4">Recent Messages</h2>
+          <div className="space-y-3">
+            {messages.map((activity) => {
+              let details = {};
+              if (activity.details) {
+                try {
+                  details = JSON.parse(activity.details);
+                } catch (e) {
+                  // Ignore parse error
+                }
+              }
+              return (
+                <div key={activity.id} className="p-3 bg-neutral-800 rounded-lg hover:bg-neutral-750 cursor-pointer transition-colors">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="text-sm">{activity.action}</p>
+                    <span className="text-xs text-neutral-500">
+                      {new Date(activity.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {activity.grok_generated && (
+                    <span className="text-xs text-purple-500 inline-flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      AI Generated
+                    </span>
+                  )}
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Tone: {details.tone || 'Professional'} | Goal: {details.goal || 'General'}
+                  </p>
+                  {details.body && (
+                    <p className="text-sm text-neutral-300 mt-2 line-clamp-2">
+                      {details.body}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {error && (
+        <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      )}
     </div>
   );
 }

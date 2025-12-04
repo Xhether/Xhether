@@ -7,6 +7,7 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 from models import Lead, LeadCreate, LeadUpdate, Activity
 from services.grok import GrokService
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -274,4 +275,59 @@ async def run_model_evaluation():
         return evaluation  # Returns {"results": {...}, "failures": [...]}
     except Exception as e:
         print(f"Evaluation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Add after /leads endpoints
+
+from typing import List
+from pydantic import BaseModel
+
+class MessageGenerate(BaseModel):
+    lead_id: str
+    tone: str = "professional"
+    goal: str = "schedule_meeting"
+    model: str = "grok-4-fast-reasoning"
+
+@app.get("/leads/{lead_id}/messages")
+def get_lead_messages(lead_id: str):
+    try:
+        response = supabase.table("activities").select("*").eq("lead_id", lead_id).order("created_at", desc=True).execute()
+        return {"messages": response.data or []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/messages/generate")
+async def generate_message(request: MessageGenerate):
+    try:
+        # Fetch lead
+        lead_response = supabase.table("leads").select("*").eq("id", request.lead_id).single().execute()
+        if not lead_response.data:
+            raise HTTPException(status_code=404, detail="Lead not found")
+        
+        lead_data = lead_response.data
+        message_result = await grok.generate_notification_message(lead_data, model=request.model)  # Reuse or adapt
+        
+        # Insert as activity
+        activity_data = {
+            "lead_id": request.lead_id,
+            "type": "message",
+            "action": f"Generated: {message_result.get('subject', 'AI Message')}",
+            "grok_generated": True,
+            "details": json.dumps({
+                "tone": request.tone,
+                "goal": request.goal,
+                "subject": message_result.get('subject'),
+                "body": message_result.get('body'),
+                "reasoning": message_result.get('reasoning')
+            })
+        }
+        supabase.table("activities").insert(activity_data).execute()
+        
+        return {
+            "success": True,
+            "message": message_result,
+            "activity_id": activity_data.get('id')  # If auto-generated
+        }
+    except Exception as e:
+        print(f"Message generation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
