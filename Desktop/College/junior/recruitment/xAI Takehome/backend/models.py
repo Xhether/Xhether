@@ -12,6 +12,12 @@ class LeadBase(BaseModel):
     value: str
     industry: Optional[str] = None
     employees: Optional[str] = None
+    website: Optional[str] = None
+    location: Optional[str] = None
+    job_title: Optional[str] = None
+    linkedin: Optional[str] = None
+    notes: Optional[str] = None
+    tags: Optional[List[str]] = None
     insights: Optional[List[str]] = []
 
 # Properties to receive on creation
@@ -28,6 +34,12 @@ class LeadUpdate(BaseModel):
     value: Optional[str] = None
     industry: Optional[str] = None
     employees: Optional[str] = None
+    website: Optional[str] = None
+    location: Optional[str] = None
+    job_title: Optional[str] = None
+    linkedin: Optional[str] = None
+    notes: Optional[str] = None
+    tags: Optional[List[str]] = None
     insights: Optional[List[str]] = None
 
 # Properties to return to client

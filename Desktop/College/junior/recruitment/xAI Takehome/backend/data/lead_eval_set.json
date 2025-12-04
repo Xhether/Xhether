@@ -1,33 +1,183 @@
 [
-  {
-    "id": "test_1",
-    "input": {
-      "company": "TechGiant Corp",
-      "employees": "5000+",
-      "industry": "Software",
-      "budget": "$1M+",
-      "last_interaction": "Demo request"
+    {
+        "id": "test_1",
+        "input": {
+            "company": "TechGiant Corp",
+            "employees": "5000+",
+            "industry": "Software",
+            "budget": "$1M+",
+            "last_interaction": "Demo request"
+        },
+        "expected_output": {
+            "qualification": "qualified",
+            "score_min": 85
+        },
+        "criteria": "Company size > 1000 and budget > $100k"
     },
-    "expected_output": {
-      "qualification": "qualified",
-      "score_min": 85
+    {
+        "id": "test_2",
+        "input": {
+            "company": "MomAndPop Shop",
+            "employees": "5",
+            "industry": "Retail",
+            "budget": "Unknown",
+            "last_interaction": "Newsletter signup"
+        },
+        "expected_output": {
+            "qualification": "disqualified",
+            "score_max": 40
+        },
+        "criteria": "Company size < 50"
     },
-    "criteria": "Company size > 1000 and budget > $100k"
-  },
-  {
-    "id": "test_2",
-    "input": {
-      "company": "MomAndPop Shop",
-      "employees": "5",
-      "industry": "Retail",
-      "budget": "Unknown",
-      "last_interaction": "Newsletter signup"
+    {
+        "id": "test_3",
+        "input": {
+            "company": "HealthTech Startup",
+            "employees": "50-100",
+            "industry": "Healthcare",
+            "budget": "$200k",
+            "last_interaction": "Inquiry email"
+        },
+        "expected_output": {
+            "qualification": "qualified",
+            "score_min": 70
+        },
+        "criteria": "Startup in healthcare with moderate budget"
     },
-    "expected_output": {
-      "qualification": "disqualified",
-      "score_max": 40
+    {
+        "id": "test_4",
+        "input": {
+            "company": "Finance Corp",
+            "employees": "1000+",
+            "industry": "Finance",
+            "budget": "$500k",
+            "last_interaction": "No response"
+        },
+        "expected_output": {
+            "qualification": "needs_review",
+            "score_min": 50,
+            "score_max": 70
+        },
+        "criteria": "Large company but no engagement"
     },
-    "criteria": "Company size < 50"
-  }
+    {
+        "id": "test_5",
+        "input": {
+            "company": "EduTech Inc",
+            "employees": "200-500",
+            "industry": "Education",
+            "budget": "$100k",
+            "last_interaction": "Positive call"
+        },
+        "expected_output": {
+            "qualification": "qualified",
+            "score_min": 80
+        },
+        "criteria": "Good engagement in education sector"
+    },
+    {
+        "id": "test_6",
+        "input": {
+            "company": "Retail Giant",
+            "employees": "10000+",
+            "industry": "Retail",
+            "budget": "$2M+",
+            "last_interaction": "Contract negotiation"
+        },
+        "expected_output": {
+            "qualification": "qualified",
+            "score_min": 90
+        },
+        "criteria": "Large retail with high budget and advanced interaction"
+    },
+    {
+        "id": "test_7",
+        "input": {
+            "company": "Small Consultancy",
+            "employees": "20",
+            "industry": "Consulting",
+            "budget": "$50k",
+            "last_interaction": "Initial email"
+        },
+        "expected_output": {
+            "qualification": "disqualified",
+            "score_max": 50
+        },
+        "criteria": "Small size and low budget"
+    },
+    {
+        "id": "test_8",
+        "input": {
+            "company": "Manufacturing Co",
+            "employees": "500-1000",
+            "industry": "Manufacturing",
+            "budget": "$300k",
+            "last_interaction": "Demo scheduled"
+        },
+        "expected_output": {
+            "qualification": "qualified",
+            "score_min": 75
+        },
+        "criteria": "Medium size with scheduled demo"
+    },
+    {
+        "id": "test_9",
+        "input": {
+            "company": "NonProfit Org",
+            "employees": "100",
+            "industry": "Non-Profit",
+            "budget": "Unknown",
+            "last_interaction": "No interaction"
+        },
+        "expected_output": {
+            "qualification": "needs_review",
+            "score_max": 60
+        },
+        "criteria": "Non-profit with unknown budget and no interaction"
+    },
+    {
+        "id": "test_10",
+        "input": {
+            "company": "AI Startup",
+            "employees": "50",
+            "industry": "Technology",
+            "budget": "$150k",
+            "last_interaction": "Partnership discussion"
+        },
+        "expected_output": {
+            "qualification": "qualified",
+            "score_min": 80
+        },
+        "criteria": "Tech startup with partnership interest"
+    },
+    {
+        "id": "test_11",
+        "input": {
+            "company": "Ecommerce Store",
+            "employees": "300",
+            "industry": "E-commerce",
+            "budget": "$400k",
+            "last_interaction": "Follow-up call"
+        },
+        "expected_output": {
+            "qualification": "qualified",
+            "score_min": 75
+        },
+        "criteria": "E-commerce with follow-up"
+    },
+    {
+        "id": "test_12",
+        "input": {
+            "company": "Local Bakery",
+            "employees": "8",
+            "industry": "Food",
+            "budget": "$10k",
+            "last_interaction": "Visit"
+        },
+        "expected_output": {
+            "qualification": "disqualified",
+            "score_max": 30
+        },
+        "criteria": "Very small business"
+    }
 ]
-

@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
 from dotenv import load_dotenv
-from models import Lead, LeadCreate, Activity
+from models import Lead, LeadCreate, LeadUpdate, Activity
 from services.grok import GrokService
 
 load_dotenv()
@@ -195,18 +195,17 @@ async def qualify_lead_background(lead_data: dict):
 async def run_model_evaluation():
     """
     Runs the full evaluation suite against the test dataset.
-    This might take time, so in a real app we'd use a job queue,
-    but async is fine for this scale.
     """
     try:
         # Load test data
-        with open("backend/data/lead_eval_set.json", "r") as f:
+        with open("data/lead_eval_set.json", "r") as f:
             test_cases = json.load(f)
             
-        results = await grok.run_evaluation(
+        evaluation = await grok.run_evaluation(
             test_cases=test_cases, 
-            models=["grok-beta"] # Add more models here as available
+            models=["grok-3", "grok-4-fast-reasoning", "grok-4-fast-non-reasoning"]  # Specific models requested
         )
-        return results
+        return evaluation  # Returns {"results": {...}, "failures": [...]}
     except Exception as e:
+        print(f"Evaluation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

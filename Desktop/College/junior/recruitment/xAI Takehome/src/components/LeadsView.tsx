@@ -72,7 +72,7 @@ export function LeadsView({ onSelectLead }: LeadsViewProps) {
 
   const filteredLeads = leads.filter((lead) => {
     const matchesStage = selectedStage === 'all' || lead.stage === selectedStage;
-    const matchesSearch = 
+    const matchesSearch =
       lead.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.contact.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStage && matchesSearch;
@@ -85,7 +85,7 @@ export function LeadsView({ onSelectLead }: LeadsViewProps) {
           <h1 className="text-3xl mb-2">Leads</h1>
           <p className="text-neutral-400">Manage and track your sales prospects</p>
         </div>
-        <button 
+        <button
           onClick={() => setView('add')}
           className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-neutral-200 transition-colors"
         >
@@ -116,11 +116,10 @@ export function LeadsView({ onSelectLead }: LeadsViewProps) {
           <button
             key={stage}
             onClick={() => setSelectedStage(stage)}
-            className={`px-4 py-2 rounded-lg capitalize whitespace-nowrap transition-colors ${
-              selectedStage === stage
+            className={`px-4 py-2 rounded-lg capitalize whitespace-nowrap transition-colors ${selectedStage === stage
                 ? 'bg-white text-black'
                 : 'bg-neutral-900 text-neutral-400 hover:bg-neutral-800'
-            }`}
+              }`}
           >
             {stage}
           </button>

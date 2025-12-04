@@ -3,6 +3,7 @@ import json
 import time
 from openai import AsyncOpenAI
 from typing import List, Dict, Any
+from datetime import datetime
 
 class GrokService:
     def __init__(self):
@@ -55,10 +56,13 @@ class GrokService:
             return result
 
         except Exception as e:
+            print(f"Grok API Error: {e}")
             return {
                 "score": 0,
                 "stage": "error",
                 "reasoning": str(e),
+                "recommended_action": "Review manually",
+                "insights": [],
                 "_meta": {"latency": 0, "status": "failure", "error": str(e)}
             }
 
@@ -70,6 +74,7 @@ class GrokService:
         - Latency (how fast was it?)
         """
         results = {}
+        all_failures = []
 
         for model in models:
             print(f"Testing model: {model}")
@@ -80,6 +85,7 @@ class GrokService:
                 "total_latency": 0
             }
             
+            model_failures = []
             for case in test_cases:
                 model_metrics["total"] += 1
                 
@@ -89,15 +95,27 @@ class GrokService:
                 # 1. Check Failure Rate
                 if prediction["_meta"]["status"] == "failure":
                     model_metrics["failures"] += 1
+                    model_failures.append({
+                        "model": model,
+                        "category": "Lead Qualification",
+                        "issue": prediction.get("reasoning", "Unknown error"),
+                        "timestamp": datetime.now().isoformat()
+                    })
                     continue
                 
                 model_metrics["total_latency"] += prediction["_meta"]["latency"]
 
                 # 2. Check Accuracy (Lead Stage Match)
-                # You could also check if score is within a range
                 expected_stage = case["expected_output"]["qualification"]
                 if prediction["stage"] == expected_stage:
                     model_metrics["correct"] += 1
+                else:
+                    model_failures.append({
+                        "model": model,
+                        "category": "Lead Qualification",
+                        "issue": f"Expected '{expected_stage}', got '{prediction['stage']}'",
+                        "timestamp": datetime.now().isoformat()
+                    })
             
             # Calculate final stats
             total = model_metrics["total"]
@@ -107,4 +125,11 @@ class GrokService:
                 "avg_latency": model_metrics["total_latency"] / (total - model_metrics["failures"]) if (total - model_metrics["failures"]) > 0 else 0
             }
             
-        return results
+            # Collect failures for qualitative analysis (limit to 3 recent)
+            all_failures.extend(model_failures[-3:])
+
+        # Return failures as well
+        return {
+            "results": results,
+            "failures": all_failures[-3:]  # Last 3 failures
+        }

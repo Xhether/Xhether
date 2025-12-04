@@ -29,7 +29,7 @@ export function PipelineOverview({ data }: PipelineOverviewProps) {
   return (
     <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
       <h2 className="text-xl mb-6">Pipeline Overview</h2>
-      
+
       <div className="space-y-4">
         {stages.map((stage) => (
           <div key={stage.name}>
@@ -50,7 +50,7 @@ export function PipelineOverview({ data }: PipelineOverviewProps) {
       <div className="mt-6 pt-6 border-t border-neutral-800">
         <div className="flex justify-between text-sm">
           <span className="text-neutral-400">Total Pipeline Value</span>
-          <span>--</span> 
+          <span>--</span>
         </div>
       </div>
     </div>

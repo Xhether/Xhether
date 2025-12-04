@@ -16,10 +16,10 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
   return (
     <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
       <h2 className="text-xl mb-6">Recent Activity</h2>
-      
+
       <div className="space-y-4">
         {displayActivities.length === 0 ? (
-           <p className="text-neutral-500 text-sm">No recent activity.</p>
+          <p className="text-neutral-500 text-sm">No recent activity.</p>
         ) : (
           displayActivities.map((activity, index) => {
             const { Icon, color } = getIconAndColor(activity.type);

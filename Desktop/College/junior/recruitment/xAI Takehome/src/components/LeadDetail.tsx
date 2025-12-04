@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import React from 'react';
 import { ArrowLeft, Mail, Phone, Linkedin, Calendar, TrendingUp, MessageSquare, Edit, Trash2, Save, X } from 'lucide-react';
 import { clearCache } from '../utils/cache';
 
@@ -19,6 +20,11 @@ interface Lead {
   industry: string;
   employees?: string;
   website?: string;
+  location?: string;
+  job_title?: string;
+  linkedin?: string;
+  notes?: string;
+  tags?: string[];
   last_contact?: string;
   insights?: string[];
 }
@@ -54,7 +60,7 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
 
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this lead?')) return;
-    
+
     try {
       const response = await fetch(`http://localhost:8000/leads/${leadId}`, {
         method: 'DELETE',
@@ -83,24 +89,22 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
       if (response.ok) {
         setIsEditing(false);
         clearCache('dashboard_data');
-        
-        // Re-fetch the lead to get the latest data (ensures we see our changes immediately)
+
+        // Re-fetch the lead to get the latest data
         const fetchResponse = await fetch(`http://localhost:8000/leads/${leadId}`);
         if (fetchResponse.ok) {
           const updatedData = await fetchResponse.json();
           setLead(updatedData);
           setEditForm(updatedData);
         }
-        
-        // If we changed critical fields that trigger Grok re-scoring, 
-        // poll for updates after a delay to catch the new score/insights
-        const criticalFields = ['company', 'industry', 'employees'];
-        const changedCritical = Object.keys(editForm).some(k => 
+
+        // Poll for Grok updates if needed
+        const criticalFields = ['company', 'industry', 'employees', 'location', 'job_title'];
+        const changedCritical = Object.keys(editForm).some(k =>
           criticalFields.includes(k) && editForm[k as keyof Lead] !== lead?.[k as keyof Lead]
         );
-        
+
         if (changedCritical && lead) {
-          // Wait 3-4 seconds for Grok to process, then re-fetch
           setTimeout(async () => {
             const pollResponse = await fetch(`http://localhost:8000/leads/${leadId}`);
             if (pollResponse.ok) {
@@ -121,9 +125,14 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setEditForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleTagsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const tagsArray = e.target.value.split(',').map(t => t.trim());
+    setEditForm(prev => ({ ...prev, tags: tagsArray }));
   };
 
   if (loading) return <div className="p-8 text-white">Loading...</div>;
@@ -152,11 +161,6 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
       timestamp: '1 day ago',
       grokGenerated: false,
     },
-  ];
-
-  const grokInsights = [
-    'Strong fit based on recent company growth and expansion into new markets',
-    'Decision maker identified - John Smith has authority over technology purchases',
   ];
 
   return (
@@ -202,14 +206,14 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
               <div className="flex gap-2">
                 {isEditing ? (
                   <>
-                    <button 
+                    <button
                       onClick={handleSave}
                       disabled={isSaving}
                       className="p-2 bg-green-500/10 text-green-500 rounded-lg hover:bg-green-500/20 transition-colors"
                     >
                       <Save className="w-5 h-5" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         setIsEditing(false);
                         setEditForm(lead); // Reset form
@@ -221,13 +225,13 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
                   </>
                 ) : (
                   <>
-                    <button 
+                    <button
                       onClick={() => setIsEditing(true)}
                       className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors"
                     >
                       <Edit className="w-5 h-5" />
                     </button>
-                    <button 
+                    <button
                       onClick={handleDelete}
                       className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors"
                     >
@@ -248,6 +252,7 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
                       name="email"
                       value={editForm.email}
                       onChange={handleInputChange}
+                      placeholder="e.g., john@acme.com"
                       className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
                     />
                   ) : (
@@ -264,6 +269,7 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
                       name="phone"
                       value={editForm.phone || ''}
                       onChange={handleInputChange}
+                      placeholder="e.g., +1 (555) 123-4567"
                       className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
                     />
                   ) : (
@@ -278,10 +284,11 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
                     name="industry"
                     value={editForm.industry || ''}
                     onChange={handleInputChange}
+                    placeholder="e.g., Technology"
                     className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
                   />
                 ) : (
-                  <span>{lead.industry || 'Unknown'}</span>
+                  <span>{lead.industry || 'N/A'}</span>
                 )}
               </div>
               <div>
@@ -293,7 +300,7 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
                     onChange={handleInputChange}
                     className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
                   >
-                    <option value="">Unknown</option>
+                    <option value="">Select size</option>
                     <option>1-10</option>
                     <option>11-50</option>
                     <option>51-200</option>
@@ -302,11 +309,99 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
                     <option>1000+</option>
                   </select>
                 ) : (
-                  <span>{lead.employees || 'Unknown'}</span>
+                  <span>{lead.employees || 'N/A'}</span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500 mb-1">Website</p>
+                {isEditing ? (
+                  <input
+                    name="website"
+                    value={editForm.website || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., https://example.com"
+                    className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
+                  />
+                ) : (
+                  <span>{lead.website || 'N/A'}</span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500 mb-1">Location</p>
+                {isEditing ? (
+                  <input
+                    name="location"
+                    value={editForm.location || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., San Francisco, CA"
+                    className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
+                  />
+                ) : (
+                  <span>{lead.location || 'N/A'}</span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500 mb-1">Job Title</p>
+                {isEditing ? (
+                  <input
+                    name="job_title"
+                    value={editForm.job_title || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., VP of Sales"
+                    className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
+                  />
+                ) : (
+                  <span>{lead.job_title || 'N/A'}</span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500 mb-1">LinkedIn</p>
+                {isEditing ? (
+                  <input
+                    name="linkedin"
+                    value={editForm.linkedin || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., linkedin.com/in/johnsmith"
+                    className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
+                  />
+                ) : (
+                  <span>{lead.linkedin || 'N/A'}</span>
                 )}
               </div>
             </div>
-            
+
+            {/* Additional Info Section (Notes and Tags) */}
+            <div className="space-y-4 mt-6 pt-6 border-t border-neutral-800">
+              <div>
+                <p className="text-sm text-neutral-500 mb-1">Notes</p>
+                {isEditing ? (
+                  <textarea
+                    name="notes"
+                    value={editForm.notes || ''}
+                    onChange={handleInputChange}
+                    placeholder="Add any relevant notes about this lead..."
+                    className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full min-h-[100px]"
+                  />
+                ) : (
+                  <p className="text-neutral-300">{lead.notes || 'No notes available'}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-neutral-500 mb-1">Tags</p>
+                {isEditing ? (
+                  <input
+                    name="tags"
+                    value={(editForm.tags || []).join(', ')}
+                    onChange={handleTagsChange}
+                    placeholder="e.g., high-priority, enterprise, q1-target"
+                    className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
+                  />
+                ) : (
+                  <p className="text-neutral-300">{(lead.tags || []).join(', ') || 'No tags'}</p>
+                )}
+              </div>
+            </div>
+
             {!isEditing && (
               <div className="flex gap-2">
                 <button className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-neutral-200 transition-colors">
