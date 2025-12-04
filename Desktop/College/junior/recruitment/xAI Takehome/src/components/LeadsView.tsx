@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, Plus, ChevronDown } from 'lucide-react';
 import { LeadCard } from './LeadCard';
 
@@ -6,74 +6,55 @@ interface LeadsViewProps {
   onSelectLead: (leadId: string) => void;
 }
 
+interface Lead {
+  id: string;
+  company: string;
+  contact: string;
+  email: string;
+  score: number;
+  stage: string;
+  lastContact: string;
+  value: string;
+}
+
 export function LeadsView({ onSelectLead }: LeadsViewProps) {
   const [selectedStage, setSelectedStage] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const stages = ['all', 'new', 'contacted', 'qualified', 'proposal', 'closed'];
 
-  const leads = [
-    {
-      id: '1',
-      company: 'Acme Corporation',
-      contact: 'John Smith',
-      email: 'john@acme.com',
-      score: 92,
-      stage: 'qualified',
-      lastContact: '2 days ago',
-      value: '$45,000',
-    },
-    {
-      id: '2',
-      company: 'TechStart Inc',
-      contact: 'Sarah Johnson',
-      email: 'sarah@techstart.com',
-      score: 85,
-      stage: 'contacted',
-      lastContact: '1 day ago',
-      value: '$32,000',
-    },
-    {
-      id: '3',
-      company: 'Innovate Labs',
-      contact: 'Michael Chen',
-      email: 'michael@innovatelabs.com',
-      score: 78,
-      stage: 'new',
-      lastContact: '3 hours ago',
-      value: '$58,000',
-    },
-    {
-      id: '4',
-      company: 'DataCo Solutions',
-      contact: 'Emily Davis',
-      email: 'emily@dataco.com',
-      score: 95,
-      stage: 'proposal',
-      lastContact: '5 days ago',
-      value: '$72,000',
-    },
-    {
-      id: '5',
-      company: 'CloudTech Systems',
-      contact: 'Robert Wilson',
-      email: 'robert@cloudtech.com',
-      score: 88,
-      stage: 'qualified',
-      lastContact: '1 week ago',
-      value: '$38,000',
-    },
-    {
-      id: '6',
-      company: 'Enterprise Co',
-      contact: 'Lisa Anderson',
-      email: 'lisa@enterpriseco.com',
-      score: 71,
-      stage: 'contacted',
-      lastContact: '4 days ago',
-      value: '$95,000',
-    },
-  ];
+  useEffect(() => {
+    const fetchLeads = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/leads');
+        if (response.ok) {
+          const data = await response.json();
+          // Map backend data to frontend format if needed, or use as is
+          // Assuming backend returns keys matching the interface, but we might need to handle snake_case to camelCase
+          // For now, direct mapping or minimal transformation:
+          const formattedLeads = data.map((item: any) => ({
+            id: item.id,
+            company: item.company,
+            contact: item.contact,
+            email: item.email,
+            score: item.score,
+            stage: item.stage,
+            lastContact: item.last_contact ? new Date(item.last_contact).toLocaleDateString() : 'Never',
+            value: item.value,
+          }));
+          setLeads(formattedLeads);
+        }
+      } catch (error) {
+        console.error('Failed to fetch leads:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeads();
+  }, []);
 
   const filteredLeads = leads.filter((lead) => {
     const matchesStage = selectedStage === 'all' || lead.stage === selectedStage;

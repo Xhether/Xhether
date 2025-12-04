@@ -9,7 +9,7 @@ class LeadBase(BaseModel):
     email: str
     phone: Optional[str] = None
     stage: str = "new"
-    value: str  # stored as string in frontend, maybe decimal in DB
+    value: str
     industry: Optional[str] = None
 
 # Properties to receive on creation
@@ -21,8 +21,8 @@ class Lead(LeadBase):
     id: str
     score: int
     last_contact: Optional[datetime] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -31,12 +31,12 @@ class ActivityBase(BaseModel):
     type: str
     action: str
     grok_generated: bool = False
-    timestamp: datetime
+    timestamp: Optional[datetime] = None
 
 class Activity(ActivityBase):
     id: str
     lead_id: str
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
-

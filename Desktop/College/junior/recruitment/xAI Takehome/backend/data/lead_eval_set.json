@@ -1,0 +1,33 @@
+[
+  {
+    "id": "test_1",
+    "input": {
+      "company": "TechGiant Corp",
+      "employees": "5000+",
+      "industry": "Software",
+      "budget": "$1M+",
+      "last_interaction": "Demo request"
+    },
+    "expected_output": {
+      "qualification": "qualified",
+      "score_min": 85
+    },
+    "criteria": "Company size > 1000 and budget > $100k"
+  },
+  {
+    "id": "test_2",
+    "input": {
+      "company": "MomAndPop Shop",
+      "employees": "5",
+      "industry": "Retail",
+      "budget": "Unknown",
+      "last_interaction": "Newsletter signup"
+    },
+    "expected_output": {
+      "qualification": "disqualified",
+      "score_max": 40
+    },
+    "criteria": "Company size < 50"
+  }
+]
+
