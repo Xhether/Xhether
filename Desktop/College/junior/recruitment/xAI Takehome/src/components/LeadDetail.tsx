@@ -1,26 +1,135 @@
-import { ArrowLeft, Mail, Phone, Linkedin, Calendar, TrendingUp, MessageSquare, Edit, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Mail, Phone, Linkedin, Calendar, TrendingUp, MessageSquare, Edit, Trash2, Save, X } from 'lucide-react';
+import { clearCache } from '../utils/cache';
 
 interface LeadDetailProps {
   leadId: string;
   onBack: () => void;
 }
 
+interface Lead {
+  id: string;
+  company: string;
+  contact: string;
+  email: string;
+  phone: string;
+  score: number;
+  stage: string;
+  value: string;
+  industry: string;
+  employees?: string;
+  website?: string;
+  last_contact?: string;
+  insights?: string[];
+}
+
 export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
-  // Mock data - would be fetched based on leadId
-  const lead = {
-    company: 'Acme Corporation',
-    contact: 'John Smith',
-    email: 'john@acme.com',
-    phone: '+1 (555) 123-4567',
-    linkedin: 'linkedin.com/in/johnsmith',
-    score: 92,
-    stage: 'qualified',
-    value: '$45,000',
-    industry: 'Technology',
-    employees: '500-1000',
-    website: 'acme.com',
+  const [lead, setLead] = useState<Lead | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Edit Form State
+  const [editForm, setEditForm] = useState<Partial<Lead>>({});
+
+  useEffect(() => {
+    const fetchLead = async () => {
+      try {
+        const response = await fetch(`http://localhost:8000/leads/${leadId}`);
+        if (!response.ok) throw new Error('Failed to fetch lead');
+        const data = await response.json();
+        setLead(data);
+        setEditForm(data);
+      } catch (err) {
+        setError('Failed to load lead data');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLead();
+  }, [leadId]);
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this lead?')) return;
+    
+    try {
+      const response = await fetch(`http://localhost:8000/leads/${leadId}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        clearCache('dashboard_data'); // Refresh dashboard stats
+        onBack();
+      } else {
+        alert('Failed to delete lead');
+      }
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      alert('Error connecting to server');
+    }
   };
 
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`http://localhost:8000/leads/${leadId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+
+      if (response.ok) {
+        setIsEditing(false);
+        clearCache('dashboard_data');
+        
+        // Re-fetch the lead to get the latest data (ensures we see our changes immediately)
+        const fetchResponse = await fetch(`http://localhost:8000/leads/${leadId}`);
+        if (fetchResponse.ok) {
+          const updatedData = await fetchResponse.json();
+          setLead(updatedData);
+          setEditForm(updatedData);
+        }
+        
+        // If we changed critical fields that trigger Grok re-scoring, 
+        // poll for updates after a delay to catch the new score/insights
+        const criticalFields = ['company', 'industry', 'employees'];
+        const changedCritical = Object.keys(editForm).some(k => 
+          criticalFields.includes(k) && editForm[k as keyof Lead] !== lead?.[k as keyof Lead]
+        );
+        
+        if (changedCritical && lead) {
+          // Wait 3-4 seconds for Grok to process, then re-fetch
+          setTimeout(async () => {
+            const pollResponse = await fetch(`http://localhost:8000/leads/${leadId}`);
+            if (pollResponse.ok) {
+              const updatedData = await pollResponse.json();
+              setLead(updatedData);
+              setEditForm(updatedData);
+            }
+          }, 3500);
+        }
+      } else {
+        alert('Failed to update lead');
+      }
+    } catch (error) {
+      console.error('Error updating lead:', error);
+      alert('Error connecting to server');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setEditForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  if (loading) return <div className="p-8 text-white">Loading...</div>;
+  if (error || !lead) return <div className="p-8 text-red-500">{error || 'Lead not found'}</div>;
+
+  // Mock score factors (could come from backend later)
   const scoreFactors = [
     { name: 'Company Size', score: 95, weight: 30 },
     { name: 'Industry Match', score: 90, weight: 25 },
@@ -29,6 +138,7 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
     { name: 'Timeline', score: 92, weight: 10 },
   ];
 
+  // Mock activities for now
   const activities = [
     {
       type: 'email',
@@ -42,25 +152,11 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
       timestamp: '1 day ago',
       grokGenerated: false,
     },
-    {
-      type: 'analysis',
-      action: 'Grok analyzed company profile and updated score',
-      timestamp: '1 day ago',
-      grokGenerated: true,
-    },
-    {
-      type: 'call',
-      action: 'Discovery call scheduled',
-      timestamp: '3 hours ago',
-      grokGenerated: false,
-    },
   ];
 
   const grokInsights = [
     'Strong fit based on recent company growth and expansion into new markets',
     'Decision maker identified - John Smith has authority over technology purchases',
-    'Current solution contract expires in Q2 2026 - optimal timing for outreach',
-    'Engaged with similar vendors recently, showing active buying intent',
   ];
 
   return (
@@ -78,17 +174,67 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
             <div className="flex justify-between items-start mb-6">
-              <div>
-                <h1 className="text-3xl mb-2">{lead.company}</h1>
-                <p className="text-neutral-400">{lead.contact}</p>
+              <div className="flex-1 mr-4">
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <input
+                      name="company"
+                      value={editForm.company}
+                      onChange={handleInputChange}
+                      className="text-3xl font-bold bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
+                      placeholder="Company Name"
+                    />
+                    <input
+                      name="contact"
+                      value={editForm.contact}
+                      onChange={handleInputChange}
+                      className="text-neutral-400 bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
+                      placeholder="Contact Name"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <h1 className="text-3xl mb-2">{lead.company}</h1>
+                    <p className="text-neutral-400">{lead.contact}</p>
+                  </>
+                )}
               </div>
               <div className="flex gap-2">
-                <button className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors">
-                  <Edit className="w-5 h-5" />
-                </button>
-                <button className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors">
-                  <Trash2 className="w-5 h-5 text-red-500" />
-                </button>
+                {isEditing ? (
+                  <>
+                    <button 
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="p-2 bg-green-500/10 text-green-500 rounded-lg hover:bg-green-500/20 transition-colors"
+                    >
+                      <Save className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setIsEditing(false);
+                        setEditForm(lead); // Reset form
+                      }}
+                      className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => setIsEditing(true)}
+                      className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors"
+                    >
+                      <Edit className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={handleDelete}
+                      className="p-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors"
+                    >
+                      <Trash2 className="w-5 h-5 text-red-500" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -97,49 +243,99 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
                 <p className="text-sm text-neutral-500 mb-1">Email</p>
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-neutral-400" />
-                  <span>{lead.email}</span>
+                  {isEditing ? (
+                    <input
+                      name="email"
+                      value={editForm.email}
+                      onChange={handleInputChange}
+                      className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
+                    />
+                  ) : (
+                    <span>{lead.email}</span>
+                  )}
                 </div>
               </div>
               <div>
                 <p className="text-sm text-neutral-500 mb-1">Phone</p>
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-neutral-400" />
-                  <span>{lead.phone}</span>
+                  {isEditing ? (
+                    <input
+                      name="phone"
+                      value={editForm.phone || ''}
+                      onChange={handleInputChange}
+                      className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
+                    />
+                  ) : (
+                    <span>{lead.phone || 'N/A'}</span>
+                  )}
                 </div>
               </div>
               <div>
                 <p className="text-sm text-neutral-500 mb-1">Industry</p>
-                <span>{lead.industry}</span>
+                {isEditing ? (
+                  <input
+                    name="industry"
+                    value={editForm.industry || ''}
+                    onChange={handleInputChange}
+                    className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
+                  />
+                ) : (
+                  <span>{lead.industry || 'Unknown'}</span>
+                )}
               </div>
               <div>
                 <p className="text-sm text-neutral-500 mb-1">Employees</p>
-                <span>{lead.employees}</span>
+                {isEditing ? (
+                  <select
+                    name="employees"
+                    value={editForm.employees || ''}
+                    onChange={handleInputChange}
+                    className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 w-full"
+                  >
+                    <option value="">Unknown</option>
+                    <option>1-10</option>
+                    <option>11-50</option>
+                    <option>51-200</option>
+                    <option>201-500</option>
+                    <option>501-1000</option>
+                    <option>1000+</option>
+                  </select>
+                ) : (
+                  <span>{lead.employees || 'Unknown'}</span>
+                )}
               </div>
             </div>
-
-            <div className="flex gap-2">
-              <button className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-neutral-200 transition-colors">
-                <MessageSquare className="w-4 h-4" />
-                Generate Message
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors">
-                <Calendar className="w-4 h-4" />
-                Schedule Meeting
-              </button>
-            </div>
+            
+            {!isEditing && (
+              <div className="flex gap-2">
+                <button className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-neutral-200 transition-colors">
+                  <MessageSquare className="w-4 h-4" />
+                  Generate Message
+                </button>
+                <button className="flex items-center gap-2 px-4 py-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors">
+                  <Calendar className="w-4 h-4" />
+                  Schedule Meeting
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Grok Insights */}
           <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
             <h2 className="text-xl mb-4">Grok AI Insights</h2>
-            <ul className="space-y-3">
-              {grokInsights.map((insight, index) => (
-                <li key={index} className="flex gap-3">
-                  <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-2 flex-shrink-0" />
-                  <p className="text-neutral-300">{insight}</p>
-                </li>
-              ))}
-            </ul>
+            {lead.insights && lead.insights.length > 0 ? (
+              <ul className="space-y-3">
+                {lead.insights.map((insight, index) => (
+                  <li key={index} className="flex gap-3">
+                    <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-2 flex-shrink-0" />
+                    <p className="text-neutral-300">{insight}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-neutral-500 italic">No insights available yet. Check back after AI processing.</p>
+            )}
           </div>
 
           {/* Activity Timeline */}
@@ -231,13 +427,37 @@ export function LeadDetail({ leadId, onBack }: LeadDetailProps) {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-neutral-500 mb-2">Current Stage</p>
-                <div className="px-3 py-2 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-lg text-center capitalize">
-                  {lead.stage}
-                </div>
+                {isEditing ? (
+                  <select
+                    name="stage"
+                    value={editForm.stage}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none capitalize"
+                  >
+                    <option value="new">New</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="qualified">Qualified</option>
+                    <option value="proposal">Proposal</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                ) : (
+                  <div className="px-3 py-2 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-lg text-center capitalize">
+                    {lead.stage}
+                  </div>
+                )}
               </div>
               <div>
                 <p className="text-sm text-neutral-500 mb-2">Deal Value</p>
-                <p className="text-2xl">{lead.value}</p>
+                {isEditing ? (
+                  <input
+                    name="value"
+                    value={editForm.value}
+                    onChange={handleInputChange}
+                    className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1"
+                  />
+                ) : (
+                  <p className="text-2xl">{lead.value}</p>
+                )}
               </div>
             </div>
           </div>

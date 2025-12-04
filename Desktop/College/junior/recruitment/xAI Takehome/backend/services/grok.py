@@ -11,7 +11,7 @@ class GrokService:
             base_url="https://api.x.ai/v1",
         )
 
-    async def qualify_lead(self, lead_data: Dict[str, Any], model: str = "grok-beta") -> Dict[str, Any]:
+    async def qualify_lead(self, lead_data: Dict[str, Any], model: str = "grok-2-latest") -> Dict[str, Any]:
         """
         Sends lead data to Grok for qualification.
         Returns a structured JSON response with score and reasoning.
@@ -27,7 +27,8 @@ class GrokService:
             "score": <integer 0-100>,
             "stage": <"qualified" | "disqualified" | "needs_review">,
             "reasoning": <string explanation>,
-            "recommended_action": <string>
+            "recommended_action": <string>,
+            "insights": [<string array of 3-4 key insights about the company or fit>]
         }}
         """
 

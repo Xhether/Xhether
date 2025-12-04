@@ -22,7 +22,14 @@ app = FastAPI(title="xAI Takehome API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://localhost:3000", 
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -99,6 +106,45 @@ def get_lead(lead_id: str):
     except Exception as e:
         raise HTTPException(status_code=404, detail="Lead not found")
 
+from models import Lead, LeadCreate, Activity, LeadUpdate
+
+# ... imports ...
+
+@app.delete("/leads/{lead_id}")
+def delete_lead(lead_id: str):
+    try:
+        # Supabase delete requires a filter
+        response = supabase.table("leads").delete().eq("id", lead_id).execute()
+        if not response.data:
+             # If no data returned, check if it existed or just successful empty
+             # Assuming standard Supabase behavior
+             pass
+        return {"message": "Lead deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.patch("/leads/{lead_id}", response_model=Lead)
+def update_lead(lead_id: str, lead_update: LeadUpdate, background_tasks: BackgroundTasks):
+    try:
+        # Filter out None values to only update provided fields
+        update_data = {k: v for k, v in lead_update.model_dump().items() if v is not None}
+        
+        response = supabase.table("leads").update(update_data).eq("id", lead_id).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Lead not found")
+            
+        updated_lead = response.data[0]
+
+        # Trigger re-scoring if critical fields changed
+        # We check if company, industry, or employees are in the update_data
+        if any(k in update_data for k in ["company", "industry", "employees"]):
+            background_tasks.add_task(qualify_lead_background, updated_lead)
+            
+        return updated_lead
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/leads", response_model=Lead)
 async def create_lead(lead: LeadCreate, background_tasks: BackgroundTasks):
     """
@@ -124,11 +170,13 @@ async def qualify_lead_background(lead_data: dict):
     try:
         result = await grok.qualify_lead(lead_data)
         
-        # Update lead with new score/stage
-        supabase.table("leads").update({
+        # Update lead with new score/stage/insights
+        update_data = {
             "score": result.get("score", 0),
-            "stage": result.get("stage", "new")
-        }).eq("id", lead_data["id"]).execute()
+            "stage": result.get("stage", "new"),
+            "insights": result.get("insights", [])
+        }
+        supabase.table("leads").update(update_data).eq("id", lead_data["id"]).execute()
         
         # Log the activity
         supabase.table("activities").insert({

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Search, Filter, Plus, ChevronDown } from 'lucide-react';
 import { LeadCard } from './LeadCard';
+import { AddLeadView } from './AddLeadView';
+import { clearCache } from '../utils/cache';
 
 interface LeadsViewProps {
   onSelectLead: (leadId: string) => void;
@@ -18,6 +20,7 @@ interface Lead {
 }
 
 export function LeadsView({ onSelectLead }: LeadsViewProps) {
+  const [view, setView] = useState<'list' | 'add'>('list');
   const [selectedStage, setSelectedStage] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -25,36 +28,47 @@ export function LeadsView({ onSelectLead }: LeadsViewProps) {
 
   const stages = ['all', 'new', 'contacted', 'qualified', 'proposal', 'closed'];
 
-  useEffect(() => {
-    const fetchLeads = async () => {
-      try {
-        const response = await fetch('http://localhost:8000/leads');
-        if (response.ok) {
-          const data = await response.json();
-          // Map backend data to frontend format if needed, or use as is
-          // Assuming backend returns keys matching the interface, but we might need to handle snake_case to camelCase
-          // For now, direct mapping or minimal transformation:
-          const formattedLeads = data.map((item: any) => ({
-            id: item.id,
-            company: item.company,
-            contact: item.contact,
-            email: item.email,
-            score: item.score,
-            stage: item.stage,
-            lastContact: item.last_contact ? new Date(item.last_contact).toLocaleDateString() : 'Never',
-            value: item.value,
-          }));
-          setLeads(formattedLeads);
-        }
-      } catch (error) {
-        console.error('Failed to fetch leads:', error);
-      } finally {
-        setLoading(false);
+  const fetchLeads = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/leads');
+      if (response.ok) {
+        const data = await response.json();
+        const formattedLeads = data.map((item: any) => ({
+          id: item.id,
+          company: item.company,
+          contact: item.contact,
+          email: item.email,
+          score: item.score,
+          stage: item.stage,
+          lastContact: item.last_contact ? new Date(item.last_contact).toLocaleDateString() : 'Never',
+          value: item.value,
+        }));
+        setLeads(formattedLeads);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch leads:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
+    if (view === 'list') {
+      fetchLeads();
+    }
+  }, [view]);
+
+  const handleSaveLead = () => {
+    setView('list');
+    // Clear dashboard cache so numbers update
+    clearCache('dashboard_data');
     fetchLeads();
-  }, []);
+  };
+
+  if (view === 'add') {
+    return <AddLeadView onBack={() => setView('list')} onSave={handleSaveLead} />;
+  }
 
   const filteredLeads = leads.filter((lead) => {
     const matchesStage = selectedStage === 'all' || lead.stage === selectedStage;
@@ -71,7 +85,10 @@ export function LeadsView({ onSelectLead }: LeadsViewProps) {
           <h1 className="text-3xl mb-2">Leads</h1>
           <p className="text-neutral-400">Manage and track your sales prospects</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-neutral-200 transition-colors">
+        <button 
+          onClick={() => setView('add')}
+          className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-neutral-200 transition-colors"
+        >
           <Plus className="w-5 h-5" />
           Add Lead
         </button>

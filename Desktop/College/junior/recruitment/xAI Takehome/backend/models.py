@@ -11,10 +11,24 @@ class LeadBase(BaseModel):
     stage: str = "new"
     value: str
     industry: Optional[str] = None
+    employees: Optional[str] = None
+    insights: Optional[List[str]] = []
 
 # Properties to receive on creation
 class LeadCreate(LeadBase):
     pass
+
+# Properties to receive on update
+class LeadUpdate(BaseModel):
+    company: Optional[str] = None
+    contact: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    stage: Optional[str] = None
+    value: Optional[str] = None
+    industry: Optional[str] = None
+    employees: Optional[str] = None
+    insights: Optional[List[str]] = None
 
 # Properties to return to client
 class Lead(LeadBase):
